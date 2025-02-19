@@ -317,12 +317,12 @@ class CrossSectionViewer(QMainWindow):
         
         # Read elevation data into DuckDB as a table named elevation_data
         self.elevation_table_name = "elevation_data"
-        self.conn.execute(f"CREATE TABLE {self.elevation_table_name} AS SELECT * FROM 'src/data/data/all_elevations_gdf_{self.name}.parquet'")
+        self.conn.execute(f"CREATE TABLE {self.elevation_table_name} AS SELECT * FROM 'data/all_elevations_gdf_{self.name}.parquet'")
         
         # Check if recalculated_edited.csv exists, if so, load it, else load recalculated.csv
         import os
-        recalculated_edited_path = f"src/data/data/{self.name}_recalculated_edited.csv"
-        recalculated_path = f"src/data/data/{self.name}_recalculated.csv"
+        recalculated_edited_path = f"data/{self.name}_recalculated_edited.csv"
+        recalculated_path = f"data/{self.name}_recalculated.csv"
         
         if os.path.exists(recalculated_edited_path):
             self.river_table_name = "river_data"
@@ -337,8 +337,8 @@ class CrossSectionViewer(QMainWindow):
             return  # Exit the method if data is not ready
         print("Plotting initial bottom plot...")
         self.figure.clear()
-        ax = self.figure.add_subplot(111)
-        ax.grid(True)
+        self.ax1 = self.figure.add_subplot(111)
+        self.ax1.grid(True)
         query = f"SELECT dist_out, lambda, node_id, reach_id FROM {self.river_table_name} WHERE river_name = '{self.name}'"
         print(f"Executing query: {query}")  # Debug: Print the query
         full_river_data = self.conn.execute(query).df()
@@ -356,25 +356,24 @@ class CrossSectionViewer(QMainWindow):
         print(f"Data shape: {full_river_data.shape}")
         print(f"Data head:\n{full_river_data.head()}")
         
-        self.scatter = ax.scatter(full_river_data['dist_out'], full_river_data['lambda'], picker=True)
-        ax.axhline(2, color='red', linestyle='--', label=r'$\Lambda = 2$')
-        ax.set_xlabel('Dist Out')
-        ax.set_ylabel('Lambda')
-        ax.set_yscale('log')
+        self.scatter = self.ax1.scatter(full_river_data['dist_out'], full_river_data['lambda'], picker=5)
+        self.ax1.axhline(2, color='red', linestyle='--', label=r'$\Lambda = 2$')
+        self.ax1.set_xlabel('Dist Out')
+        self.ax1.set_ylabel('Lambda')
+        self.ax1.set_yscale('log')
         if self.name in self.data_dict:
-            riv_data = self.data_dict[self.name]
             # Plot avulsion lines
-            avulsion_lines = riv_data.get("avulsion_lines", [])
+            avulsion_lines = self.data_dict[self.name].get("avulsion_lines", [])
             for avulsion_line in avulsion_lines:
                 position = avulsion_line.get('position', None)
                 if position is not None:
-                    ax.axvline(x=position * 1000, color='yellow', linestyle='--', linewidth=1)  # Convert km to m
+                    self.ax1.axvline(x=position * 1000, color='yellow', linestyle='--', linewidth=1)
             # Plot crevasse splay lines
-            crevasse_splay_lines = riv_data.get("crevasse_splay_lines", [])
+            crevasse_splay_lines = self.data_dict[self.name].get("crevasse_splay_lines", [])
             for crevasse_line in crevasse_splay_lines:
                 position = crevasse_line.get('position', None)
                 if position is not None:
-                    ax.axvline(x=position * 1000, color='pink', linestyle=':', linewidth=1)  # Convert km to m
+                    self.ax1.axvline(x=position * 1000, color='pink', linestyle=':', linewidth=1)
         
         # Add these lines to force the plot to update
         self.canvas.draw()
@@ -504,9 +503,10 @@ class CrossSectionViewer(QMainWindow):
         # Optionally, update the UI to indicate that this label is in edit mode.
      
 
-    def on_pick(self, event):
-        if hasattr(event, 'ind') and isinstance(event.artist, type(self.scatter)):
+    def on_pick(self, event: PickEvent):
+        if event.artist is self.scatter:
             index = event.ind[0]  # Access the index directly
+            print(f"Pick event triggered on scatter index {index}")
             query = f"SELECT dist_out, lambda, node_id, reach_id FROM {self.river_table_name} WHERE river_name = '{self.name}'"
             full_river_data = self.conn.execute(query).df()
             full_river_data.drop_duplicates(subset=['node_id', 'reach_id'], inplace=True)
@@ -693,7 +693,7 @@ class CrossSectionViewer(QMainWindow):
 
         try:
             self.conn.commit()
-            export_query = f"COPY (SELECT * FROM {self.river_table_name}) TO 'src/data/data/{self.name}_recalculated_edited.csv' (FORMAT CSV, HEADER)"
+            export_query = f"COPY (SELECT * FROM {self.river_table_name}) TO 'data/{self.name}_recalculated_edited.csv' (FORMAT CSV, HEADER)"
             self.conn.execute(export_query)
             if verbose:
                 QMessageBox.information(self, "Data Saved", f"All changes to the {self.name} river data have been saved.")
