@@ -2,3 +2,5 @@
 .env
 .venv/
 .whisper/
+.pytest_cache/
+poetry.lock

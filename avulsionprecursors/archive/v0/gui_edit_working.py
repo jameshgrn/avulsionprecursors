@@ -43,7 +43,7 @@ class CrossSectionViewer(QMainWindow):
         self.setupStatusBar()  # Add status bar setup
 
         # Load data_dict
-        with open('src/data/data/data_dict.json', 'r') as f:
+        with open('data/data_dict.json', 'r') as f:
             self.data_dict = json.load(f)
         
 
