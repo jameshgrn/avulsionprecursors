@@ -4,11 +4,13 @@ import http.client as http_client
 import logging
 import argparse            # New import for command line argument parsing
 import sys                 # New import required for QApplication usage
+from PyQt5.QtWidgets import QApplication
 
 from avulsionprecursors.db.config import DBConfig
 from avulsionprecursors.db.sword import SWORDDatabase
 from avulsionprecursors.gee.base import GEEConfig
 from avulsionprecursors.pipeline.labeling import LabelingPipeline
+from avulsionprecursors.gui.gui_edit_working import CrossSectionViewer
 
 # Load environment variables from .env file
 load_dotenv()
@@ -32,25 +34,13 @@ def initialize_gee_wrapper():
     # GEEConfig.__post_init__ should handle initializing ee
     return config
 
+def run_gui():
+    app = QApplication(sys.argv)
+    mainWin = CrossSectionViewer()
+    mainWin.show()
+    sys.exit(app.exec_())
+
 def main():
-    # Added argument parsing to choose mode (pipeline or GUI)
-    parser = argparse.ArgumentParser(description="Run mode for avulsionprecursors")
-    parser.add_argument(
-        "--mode",
-        choices=["pipeline", "gui"],
-        default="pipeline",
-        help="Choose run mode: 'pipeline' for processing or 'gui' for interactive editing."
-    )
-    args = parser.parse_args()
-
-    if args.mode == "gui":
-        from avulsionprecursors.gui.gui_edit_working import CrossSectionViewer
-        from PyQt5.QtWidgets import QApplication
-        app = QApplication(sys.argv)
-        mainWin = CrossSectionViewer()
-        mainWin.show()
-        sys.exit(app.exec_())
-
     # Mode 'pipeline' execution: existing processing logic below
     # 1. Initialize Google Earth Engine (for DEM sampling later)
     initialize_gee_wrapper()
@@ -82,6 +72,4 @@ def main():
     print("Processing complete up to the DEM/hydraulic stages.")
 
 if __name__ == "__main__":
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    print("Current working directory:", os.getcwd())
     main() 

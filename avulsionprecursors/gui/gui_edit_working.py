@@ -1029,38 +1029,15 @@ class CrossSectionViewer(QMainWindow):
 
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Launch the CrossSectionViewer GUI with a specified river name")
+    parser.add_argument("--river", type=str, default="VENEZ_2023", help="Name of the river to load")
+    args = parser.parse_args()
+
     app = QApplication(sys.argv)
-    app.setStyleSheet("""
-        QMainWindow {
-            background-color: #2B2B2B; /* Darker gray background */
-        }
-        QPushButton {
-            background-color: #ADD8E6; /* Soft light blue buttons */
-            color: #2B2B2B;
-            border-radius: 5px;
-            padding: 10px;
-        }
-        QPushButton:hover {
-            background-color: #B0E0E6; /* Slightly different shade of light blue for hover */
-        }
-        QLabel {
-            font-weight: bold;
-            color: #2B2B2B; /* Making label text white for better contrast against dark background */
-        }
-        QTextEdit {
-            border: 1px solid #C0C0C0;
-            color: white; /* Making text color white for readability */
-            background-color: #3C3F41; /* Slightly lighter gray than main background for contrast */
-        }
-    """)
-    mainWin = CrossSectionViewer()
-    mainWin.show()
-    
-    # Add this debug print
-    print("Main window shown. Starting event loop.")
-    
-    # Optionally, you can force an immediate redraw
-    mainWin.canvas.draw()
-    mainWin.canvas.flush_events()
-    
+    viewer = CrossSectionViewer()
+    # Update the viewer's river name and window title according to CLI argument
+    viewer.name = args.river
+    viewer.setWindowTitle(f"Cross Section Viewer - {args.river}")
+    viewer.show()
     sys.exit(app.exec_())
