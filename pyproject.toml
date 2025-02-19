@@ -23,6 +23,7 @@ pyqt5 = "^5.15.11"
 cartopy = "^0.24.1"
 psycopg2 = "2.9.10"
 sliderule = "^4.9.4"
+duckdb = "^1.2.0"
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.0.0"
 black = "^23.0.0"

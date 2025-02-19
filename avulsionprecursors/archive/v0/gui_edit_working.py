@@ -309,7 +309,7 @@ class CrossSectionViewer(QMainWindow):
         if not self.name:
             raise ValueError("River name must be set before loading data")
         
-        self.data_dict = self.load_data_dict('src/data/data/data_dict.json')
+        self.data_dict = self.load_data_dict('data/data_dict.json')
         # Initialize DuckDB connection and enable spatial extension
         self.conn = duckdb.connect(database=':memory:', read_only=False)
         self.conn.execute("INSTALL 'spatial';")

@@ -1,0 +1,139 @@
+{
+    "B14_2": {
+        "avulsion_lines": [
+
+            {"position": 3639.770, "date": "2014"},
+            {"position": 3738.212, "date": "2015-06"}
+        ],
+        "crevasse_splay_lines": [
+            {"position": 3663.521, "date":"2014-04"}
+        ]
+    },
+    "B1": {
+        "avulsion_lines": [
+            {"position": 4401.333, "date": "1994"}
+
+        ],
+        "crevasse_splay_lines": []
+    },
+    "VENEZ_2023": {
+        "avulsion_lines": [
+            {"position": 178.286, "date": "2022-05"}
+        ],
+        "crevasse_splay_lines": []
+    },
+    "COLOMBIA_2011_2": {
+        "avulsion_lines": [
+        ],
+
+        "crevasse_splay_lines": [
+            {"position": 452.813, "date": "2021-09"},
+            {"position": 475.626, "date": "2011-03"},
+            {"position": 459.211, "date": "2011-03"}
+        ]
+    },
+    "VENEZ_2022_N": {
+        "avulsion_lines": [
+            {"position": 44.194, "date": "2022-06"},
+            {"position": 48.200, "date": "2011-03"}
+        ],
+        "crevasse_splay_lines": [
+            {"position": 8.969, "date": "2017-09"},
+            {"position": 24.213, "date": "2021-01"},
+            {"position": 26.786, "date": "2018-11"}
+        ]
+    },
+    "ARG_LAKE_2": {
+        "avulsion_lines": [
+            {"position": 53.143, "date": "2007-07"},
+            {"position": 174.359, "date": "2017-03"}
+        ],
+        "crevasse_splay_lines": [
+            {"position": 59.679, "date": "2016-12"},
+            {"position": 75.349, "date": "2016-06"}
+
+        ]
+    },
+    "SULENGGUOLE": {
+        "avulsion_lines": [
+            {"position": 148.089, "date": "2015-01"}
+        ],
+        "crevasse_splay_lines": []
+    },
+    "RUVU_2": {
+        "avulsion_lines": [
+            {"position": 114.183, "date": "2017-04"},
+            {"position": 54.009, "date": "2017-04"}
+        ],
+        "crevasse_splay_lines": [
+            {"position": 152.104, "date": "2018-02"}
+        ]
+    },
+    "V7_2": {
+        "avulsion_lines": [
+            {"position": 2112.314, "date": "1991-04"}
+        ],
+        "crevasse_splay_lines": [
+            {"position": 2107.531, "date": "2021-08"},
+            {"position": 2126.913, "date": "2022-07"}
+        ]
+    },
+    "V11_2": {
+        "avulsion_lines": [],
+        "crevasse_splay_lines": [
+            {"position": 1865.705, "date": "2022-01"},
+            {"position": 1885.788, "date": "2011-02"},
+            {"position": 1932.642, "date": "2017-05"}
+        ]
+    },
+    "LILONGWE": {
+        "avulsion_lines": [
+            {"position": 823.914, "date": "2014-01"}
+        ],
+        "crevasse_splay_lines": []
+    },
+    "BEMARIVO": {
+        "avulsion_lines": [
+            {"position": 155.011, "date": "2008-02"},
+            {"position": 152.611, "date": "2018-01"}
+        ],
+        "crevasse_splay_lines": []
+    },
+    "RIOPIRAI": {
+        "avulsion_lines": [
+            {"position": 4403.124, "date": "1984-10"}
+        ]
+    },
+    "MANGOKY": {
+        "avulsion_lines": [
+            {"position": 12.117, "date": "2007-03"},
+            {"position": 43.484, "date": "2020-01"}
+        ],
+        "crevasse_splay_lines": [
+            {"position": 38.670, "date": "2007-03"},
+            {"position": 36.041, "date": "2015-01"},
+            {"position": 36.446, "date": "2013-03"}
+        ]
+    },
+    "TURKWEL": {
+        "avulsion_lines": [
+            {"position": 687.012, "date": "2019-12"}
+        ],
+        "crevasse_splay_lines": []
+    },
+    "MUSA": {
+        "avulsion_lines": [
+           
+        ],
+        "crevasse_splay_lines": [
+            {"position": 122.335, "date": "2021-01"}
+        ]
+    },
+    "ANJOBONY": {
+        "avulsion_lines": [
+            {"position": 120.992, "date": "2018-01"},
+            {"position": 106.062, "date": "2008-01"}
+        ],
+        "crevasse_splay_lines": []
+    }
+}
