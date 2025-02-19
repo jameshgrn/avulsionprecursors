@@ -125,6 +125,9 @@ In addition to the main processing pipeline and GUI, this repository now include
 - **Variogram Modeling:**  
   Files like `variogram.py` and `variogram_implementation.py` allow you to model and analyze the spatial structure of the river data through variograms.
 
+- **Proximity Analysis:**  
+  The `proximity_analysis.py` file provides tools for analyzing the proximity of avulsion precursors to large $\Lambda$ values.
+
 - **Plotting and Visualization:**  
   Modules including `plot_lambda.py`, `plot_mapview.py`, and `wavelengths.py` offer tools to generate plots of avulsion potential, map views of river data, and wavelength analyses, respectively. Additionally, `lengthscale_histogram.py` provides histogram visualizations of key length scales within the dataset.
 
