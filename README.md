@@ -105,6 +105,48 @@ Replace `VENEZ_2023` with the desired river name. This will open the Cross Secti
 - **Graphical User Interface (GUI):**  
   The GUI is defined in `avulsionprecursors/gui/gui_edit_working.py` and offers interactive plotting, editing, and updating of cross–section data. It accepts a `--river` argument when launched directly.
 
+
+Replace `VENEZ_2023` with the desired river name. This will open the Cross Section Viewer with the specified river loaded.
+
+> **Important:** The main processing pipeline and the GUI are decoupled. The pipeline (invoked via `main.py`) does not call the GUI.
+
+---
+
+## Analysis and Plotting
+
+In addition to the main processing pipeline and GUI, this repository now includes a comprehensive suite of analysis and plotting tools found in the `avulsionprecursors/analysis` directory. These modules include:
+
+- **Regression Analysis:**  
+  Files such as `LA_LC_regression.py` and `lengthscale_regression.py` are used for performing regression analyses on river morphology metrics.
+
+- **Spatial and Statistical Analysis:**  
+  The `LISA.py` file provides tools for Local Indicators of Spatial Association (LISA) analysis, while `based.py` implements the BASED (Boost Assissted Stream Estimator for Depth) methodology for analyzing river channels.
+
+- **Variogram Modeling:**  
+  Files like `variogram.py` and `variogram_implementation.py` allow you to model and analyze the spatial structure of the river data through variograms.
+
+- **Plotting and Visualization:**  
+  Modules including `plot_lambda.py`, `plot_mapview.py`, and `wavelengths.py` offer tools to generate plots of avulsion potential, map views of river data, and wavelength analyses, respectively. Additionally, `lengthscale_histogram.py` provides histogram visualizations of key length scales within the dataset.
+
+These analysis tools enable detailed investigation and visualization of avulsion potential ($\Lambda$), facilitating a deeper understanding of the processes controlling river avulsion.
+
+---
+
+## Code Overview
+
+- **Pipeline Processing:**  
+  Implemented in `avulsionprecursors/pipeline/labeling.py`, this module processes the DEM/hydraulic portion of the data for labeling.
+
+- **Database Connectivity:**  
+  Database configuration is handled in `avulsionprecursors/db/config.py` and `avulsionprecursors/db/sword.py`.
+
+- **Graphical User Interface (GUI):**  
+  The GUI is defined in `avulsionprecursors/gui/gui_edit_working.py` and `avulsionprecursors/gui/labeler.py` for interactive plotting and editing of cross–section data.
+
+- **Analysis and Plotting:**  
+  All analysis and visualization modules are contained within the `avulsionprecursors/analysis` directory. These include regression, spatial statistics, variogram analysis, and assorted plotting scripts that complement the processing pipeline and GUI workflows.
+
+
 ---
 
 ## Citation

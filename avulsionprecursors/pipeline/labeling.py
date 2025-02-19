@@ -86,20 +86,9 @@ class LabelingPipeline:
             grouped = cross_sections.groupby('cross_id')
             cross_section_dfs = [group for _, group in grouped]
             
-            # Label cross-sections
-            labeler = CrossSectionLabeler(
-                self.gui_config,
-                self.output_dir,
-                self.river_name
-            )
-            
-            # Process every nth cross-section
-            for i, df in enumerate(cross_section_dfs[::skip_n]):
-                print(f"\nLabeling cross-section {i+1} of {len(cross_section_dfs)//skip_n}")
-                labeled_points = labeler.label_cross_section(df)
-                
-                # Save intermediate results
-                self._save_progress(reach.reach_id, df, labeled_points)
+            # Labeling is disabled in this version.
+            # Instead, just report the number of generated cross-sections.
+            print(f"Generated {len(cross_section_dfs)} cross-sections for reach {reach.reach_id} (labeling disabled).")
     
     def _save_progress(self, reach_id: int, df: gpd.GeoDataFrame, labeled_points: dict) -> None:
         """Save intermediate labeling results."""
