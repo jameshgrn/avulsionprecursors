@@ -11,8 +11,8 @@ import os
 from datetime import datetime
 from esda import Moran_Local
 from libpysal.weights import DistanceBand
-import warnings
 import scipy.stats as stats
+import matplotlib.patches as patches  # imported to add black outlines to boxes
 
 warnings.filterwarnings("ignore")
 
@@ -38,7 +38,6 @@ def load_data(river_name: str) -> gpd.GeoDataFrame:
 
     df = pd.read_csv(f'data/{river_name}_recalculated_edited.csv')
 
-        
     df = df[df['river_name'] == river_name].dropna(subset=['dist_out', 'lambda'])
     df['dist_out'] = df['dist_out'].astype(float) / 1000  # convert to km
     df = df.sort_values('dist_out', ascending=False)  # Sort descending
@@ -255,27 +254,30 @@ def create_weighted_boxplot(point_data, random_data):
     global_stats = get_box_stats(random_data['lambda'], random_data['weight'])
     near_stats = get_box_stats(point_data['lambda'], point_data['weight'])
     
-    # Modified custom box plotting for horizontal orientation
+    # Modified custom box plotting for horizontal orientation with black outlines
     def plot_custom_box(pos, stats, color):
         median, q1, q3, wlow, whigh, mean = stats
-        # Box
+        # Color filled box
         ax.fill_between([q1, q3], [pos-0.3, pos-0.3], [pos+0.3, pos+0.3], color=color, alpha=0.7)
+        # Add black outline
+        rect = patches.Rectangle((q1, pos-0.3), q3-q1, 0.6, fill=False, edgecolor='black', linewidth=1)
+        ax.add_patch(rect)
         # Median line
-        ax.vlines(median, pos-0.3, pos+0.3, color='black', linewidth=1)  # Thinner line
+        ax.vlines(median, pos-0.3, pos+0.3, color='black', linewidth=1)
         # Whiskers
-        ax.hlines(pos, wlow, whigh, color='black', linewidth=0.5)  # Thinner line
-        ax.vlines([wlow, whigh], pos-0.15, pos+0.15, color='black', linewidth=0.5)  # Thinner line
+        ax.hlines(pos, wlow, whigh, color='black', linewidth=0.5)
+        ax.vlines([wlow, whigh], pos-0.15, pos+0.15, color='black', linewidth=0.5)
         # Mean marker - updated to use box color
         ax.plot(mean, pos, 'D', color=color, markeredgecolor='black', markersize=10)
     
-    # Plot both boxes with new colors
+    # Plot both boxes with new colors and black outlines
     plot_custom_box(0, global_stats, color1)
     plot_custom_box(1, near_stats, color2)
     
     # Modified swarmplot with increased sampling
     sampled_data = pd.concat([
-        weighted_sample(random_data, n_samples=300).assign(Type='Global Reach'),  # Increased from 100
-        weighted_sample(point_data, n_samples=300).assign(Type='Near Avulsion')   # Increased from 100
+        weighted_sample(random_data, n_samples=300).assign(Type='Global Reach'),
+        weighted_sample(point_data, n_samples=300).assign(Type='Near Avulsion')
     ])
     
     sns.swarmplot(y='Type', x='lambda', data=sampled_data,
@@ -290,38 +292,9 @@ def create_weighted_boxplot(point_data, random_data):
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     
-    # Remove the old consolidated stats_text and replace with two separate annotations
-    # Format stats with fewer decimal places
-    global_stats_text = (
-        f"Mean: {global_stats[5]:.2f}\n"
-        f"Median: {global_stats[0]:.2f}"
-    )
-    
-    near_stats_text = (
-        f"Mean: {near_stats[5]:.2f}\n"
-        f"Median: {near_stats[0]:.2f}"
-    )
-    
-    # Calculate positions for text (align with boxplot positions)
-    global_y = 0  # Align with the "Global Reach" boxplot
-    near_y = 1    # Align with the "Near Avulsion" boxplot
-    
-    # Add the two separate text annotations
-    ax.text(ax.get_xlim()[0] * 1.25, global_y, global_stats_text, 
-            verticalalignment='center',  # Changed from 'top' to 'center'
-            horizontalalignment='left',
-            fontsize=8,
-            bbox=dict(facecolor='white', alpha=0.8))
-    
-    ax.text(ax.get_xlim()[0] * 1.25, near_y, near_stats_text, 
-            verticalalignment='center',  # Changed from 'top' to 'center'
-            horizontalalignment='left',
-            fontsize=8,
-            bbox=dict(facecolor='white', alpha=0.8))
+    # Removed the text annotations for stats so that stats are only printed to the terminal
     
     plt.tight_layout()
-    
-
     plt.show()
     
     return random_data['lambda'], point_data['lambda']
@@ -439,7 +412,7 @@ def main():
         logging.error("Failed to create plot. Exiting.")
         return
 
-    # Print statistics
+    # Print statistics to the terminal (to be later added in Illustrator)
     print("Statistics Summary:")
     print("===================")
     

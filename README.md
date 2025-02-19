@@ -1,4 +1,5 @@
 # River Avulsion Precursors Encoded in Alluvial Ridge Geometry
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14895103.svg)](https://doi.org/10.5281/zenodo.14895103)
 
 This repository contains companion tools and analysis code for the GRL paper *"River Avulsion Precursors Encoded in Alluvial Ridge Geometry"*. It provides both a processing pipeline and an interactive GUI for analyzing river cross–section data.
 
