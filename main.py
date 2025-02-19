@@ -44,7 +44,7 @@ def main():
     args = parser.parse_args()
 
     if args.mode == "gui":
-        from avulsionprecursors.archive.v0.gui_edit_working import CrossSectionViewer
+        from avulsionprecursors.gui.gui_edit_working import CrossSectionViewer
         from PyQt5.QtWidgets import QApplication
         app = QApplication(sys.argv)
         mainWin = CrossSectionViewer()
