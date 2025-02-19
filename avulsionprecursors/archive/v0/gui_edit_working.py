@@ -13,7 +13,7 @@ from PyQt5.QtGui import QFont
 import pyarrow as pa
 import pyarrow.parquet as pq
 from functools import partial
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QThreadPool, QRunnable, pyqtSignal, QObject
 import json
 from sklearn.linear_model import LinearRegression
 from PyQt5.QtGui import QKeySequence
@@ -30,6 +30,28 @@ plt.style.use('dark_background')
 plt.rcParams['grid.color'] = "white"
 plt.rcParams['grid.linestyle'] = "--"
 plt.rcParams['grid.linewidth'] = 0.5
+
+# Define WorkerSignals for background tasks
+class WorkerSignals(QObject):
+    finished = pyqtSignal()
+    error = pyqtSignal(str)
+
+# Define a simple WorkerQRunnable to offload heavy computations in a thread
+class WorkerQRunnable(QRunnable):
+    def __init__(self, fn, *args, **kwargs):
+        super().__init__()
+        self.fn = fn
+        self.args = args
+        self.kwargs = kwargs
+        self.signals = WorkerSignals()
+
+    def run(self):
+        try:
+            self.fn(*self.args, **self.kwargs)
+        except Exception as e:
+            self.signals.error.emit(str(e))
+        finally:
+            self.signals.finished.emit()
 
 class CrossSectionViewer(QMainWindow):
     def __init__(self):
@@ -356,6 +378,9 @@ class CrossSectionViewer(QMainWindow):
         print(f"Data shape: {full_river_data.shape}")
         print(f"Data head:\n{full_river_data.head()}")
         
+        # Store the full dataset used for picking
+        self.full_river_data = full_river_data
+        
         self.scatter = self.ax1.scatter(full_river_data['dist_out'], full_river_data['lambda'], picker=5)
         self.ax1.axhline(2, color='red', linestyle='--', label=r'$\Lambda = 2$')
         self.ax1.set_xlabel('Dist Out')
@@ -405,6 +430,7 @@ class CrossSectionViewer(QMainWindow):
             QMessageBox.warning(self, "Input Error", "Please enter a Node ID.")
             
     def plot_cross_section(self, df):
+        # Create two panes if they don't exist
         if not hasattr(self, 'ax1') or not hasattr(self, 'ax2'):
             self.figure.clear()
             self.ax1 = self.figure.add_subplot(211)
@@ -417,7 +443,158 @@ class CrossSectionViewer(QMainWindow):
         node_id = df['node_id'].iloc[0]
         self.node_id = node_id
 
-        # Remove the chunking code and use the original plotting logic
+        # Fetch full river data for the node
+        river_query = f"""
+        SELECT *
+        FROM {self.river_table_name}
+        WHERE node_id = {node_id} AND river_name = '{self.name}'
+        """
+        values_data = self.conn.execute(river_query).df().iloc[0]
+
+        # Calculate ridge width based on floodplain measures
+        floodplain1_dist = values_data['floodplain1_dist_along']
+        floodplain2_dist = values_data['floodplain2_dist_along']
+        if pd.isna(floodplain1_dist) and not pd.isna(floodplain2_dist):
+            ridge_width = 2 * np.abs(floodplain2_dist)
+            single_side = "floodplain2"
+        elif pd.isna(floodplain2_dist) and not pd.isna(floodplain1_dist):
+            ridge_width = 2 * np.abs(floodplain1_dist)
+            single_side = "floodplain1"
+        elif not pd.isna(floodplain1_dist) and not pd.isna(floodplain2_dist):
+            ridge_width = np.abs(floodplain1_dist - floodplain2_dist)
+            single_side = None
+        else:
+            ridge_width = np.nan
+            single_side = None
+
+        # Apply sinuosity correction
+        if not pd.isna(ridge_width) and 'sinuosity' in values_data:
+            ridge_width = ridge_width / values_data['sinuosity']
+
+        total_width = ridge_width + values_data['width'] if not pd.isna(ridge_width) else np.nan
+        width_ratio = total_width / values_data['width'] if not pd.isna(total_width) else np.nan
+
+        # Create metrics text
+        metrics_text = (
+            f"Superelevation: {self.format_value(values_data['superelevation_mean'])}\n"
+            f"Gamma: {self.format_value(values_data['gamma_mean'])}\n"
+            f"Lambda: {self.format_value(values_data['lambda'])}\n"
+            f"Ridge Width: {self.format_value(ridge_width)} m"
+        )
+        if single_side:
+            metrics_text += f" (estimated from {single_side} only)"
+        metrics_text += (
+            f"\nChannel Width: {self.format_value(values_data['width'])} m\n"
+            f"Width Ratio: {self.format_value(width_ratio)}:1"
+        )
+
+        self.ax1.text(0.02, 0.75, metrics_text,
+                     transform=self.ax1.transAxes,
+                     bbox=dict(facecolor='white', alpha=0.8, edgecolor='none'),
+                     fontsize=10)
+
+        # Plot cross-section from elevation data
+        sword_data_query = f"SELECT dist_along, elevation, node_id FROM {self.elevation_table_name} WHERE node_id = {node_id}"
+        sword_data_node = self.conn.execute(sword_data_query).df()
+        self.ax1.plot(sword_data_node['dist_along'], sword_data_node['elevation'], '-o',
+                      label='Cross Section', markersize=3, color='white')
+
+        # Plot labels for each feature
+        label_colors = {
+            'channel': 'blue',
+            'ridge1': '#1B5E20',
+            'ridge2': '#A5D6A7',
+            'floodplain1': '#B71C1C',
+            'floodplain2': '#E57373'
+        }
+        min_x, max_x = float('inf'), float('-inf')
+        min_y, max_y = float('inf'), float('-inf')
+        for label, color in label_colors.items():
+            label_query = f"""
+            SELECT {label}_dist_along, {label}_elevation 
+            FROM {self.river_table_name} 
+            WHERE node_id = {node_id} AND river_name = '{self.name}' 
+                  AND {label}_dist_along IS NOT NULL AND {label}_elevation IS NOT NULL
+            """
+            label_data = self.conn.execute(label_query).df()
+            if not label_data.empty:
+                self.ax1.plot(label_data[f'{label}_dist_along'], label_data[f'{label}_elevation'],
+                              'X', markersize=10, label=label, color=color, markeredgecolor='white')
+                min_x = min(min_x, label_data[f'{label}_dist_along'].min()) - 5
+                max_x = max(max_x, label_data[f'{label}_dist_along'].max()) + 5
+                min_y = min(min_y, label_data[f'{label}_elevation'].min()) - 2
+                max_y = max(max_y, label_data[f'{label}_elevation'].max()) + 2
+
+        # Additional channel plots
+        channel_query = f"SELECT channel_dist_along, interpolated_wse, XGB_depth FROM {self.river_table_name} WHERE node_id = {node_id} AND river_name = '{self.name}'"
+        channel_data = self.conn.execute(channel_query).df()
+        if not channel_data.empty:
+            self.ax1.plot(channel_data['channel_dist_along'], channel_data['interpolated_wse'],
+                          'X', markersize=10, label='Channel', color='#4DD0E1', markeredgecolor='white')
+            self.ax1.plot(channel_data['channel_dist_along'], channel_data['interpolated_wse']-channel_data['XGB_depth'],
+                          'X', markersize=10, label='Channel', color='purple', markeredgecolor='white')
+
+        padding_x = (max_x - min_x) * 0.1
+        padding_y = (max_y - min_y) * 0.1
+        self.ax1.set_xlim(min_x - padding_x, max_x + padding_x)
+        self.ax1.set_ylim(min_y - padding_y, max_y + padding_y)
+        self.ax1.set_xlabel('Distance Along')
+        self.ax1.set_ylabel('Elevation')
+        self.ax1.legend(loc='upper center', bbox_to_anchor=(0.85, 1.45), ncol=3)
+        self.ax1.set_title(f'Cross Section for {self.name} Node ID: {node_id}')
+
+        # Bottom plot: dist_out vs lambda
+        self.ax2.grid(True)
+        self.ax2.axhline(2, color='red', linestyle='--', label=r'$\Lambda = 2$')
+        dist_out_lambda_query = f"SELECT dist_out, lambda, node_id, reach_id FROM {self.river_table_name} WHERE river_name = '{self.name}'"
+        dist_out_lambda_data = self.conn.execute(dist_out_lambda_query).df()
+        # Store the full data from the bottom scatter
+        self.full_river_data = dist_out_lambda_data.drop_duplicates(subset=['node_id', 'reach_id'])
+        self.scatter = self.ax2.scatter(self.full_river_data['dist_out'], self.full_river_data['lambda'], picker=5, s=5, color='white')
+        if self.name in self.data_dict:
+            avulsion_lines = self.data_dict[self.name].get("avulsion_lines", [])
+            for avulsion_line in avulsion_lines:
+                position = avulsion_line.get('position', None)
+                if position is not None:
+                    self.ax2.axvline(x=position * 1000, color='yellow', linestyle='--', linewidth=1, label='Avulsion')
+            crevasse_splay_lines = self.data_dict[self.name].get("crevasse_splay_lines", [])
+            for crevasse_line in crevasse_splay_lines:
+                position = crevasse_line.get('position', None)
+                if position is not None:
+                    self.ax2.axvline(x=position * 1000, color='pink', linestyle=':', linewidth=1, label='Crevasse Splay')
+
+        new_lambda_query = f"""
+            SELECT dist_out, lambda 
+            FROM {self.river_table_name} 
+            WHERE node_id = {node_id} AND river_name = '{self.name}'
+            """
+        new_lambda_row = self.conn.execute(new_lambda_query).df()
+        if not new_lambda_row.empty:
+            new_lambda_value = new_lambda_row['lambda'].iloc[0]
+            x = new_lambda_row['dist_out'].iloc[0]
+            if self.old_lambda_value is not None:
+                self.ax2.annotate('', 
+                    xy=(x, new_lambda_value), 
+                    xytext=(x, self.old_lambda_value),
+                    arrowprops=dict(facecolor='yellow',
+                                    edgecolor='white',
+                                    arrowstyle="->",
+                                    linewidth=2)
+                )
+                self.ax2.scatter([x], [self.old_lambda_value], color='yellow', label='Previous λ', marker='x', s=100, zorder=5)
+                self.ax2.scatter([x], [new_lambda_value], color='lightpink', label='New λ', marker='o', s=100, zorder=5)
+                self.ax2.legend()
+            self.old_lambda_value = None
+
+        self.ax2.set_xlabel('Dist Out')
+        self.ax2.set_ylabel('Lambda')
+        self.ax2.set_title('Dist Out vs Lambda')
+        self.ax2.set_yscale('log')
+        self.ax2.legend()
+
+        # Force redraw
+        self.canvas.draw()
+        self.canvas.flush_events()
 
     def center_on_key_points(self):
         if hasattr(self, 'ax1'):
@@ -427,7 +604,7 @@ class CrossSectionViewer(QMainWindow):
 
             for label in labels:
                 for artist in self.ax1.get_children():
-                    if isinstance(artist, plt.Line2D) and artist.get_label() == label:
+                    if isinstance(artist, Line2D) and artist.get_label() == label:
                         x_data.extend(np.array(artist.get_xdata()).tolist())  # Convert numpy array to list
                         y_data.extend(np.array(artist.get_ydata()).tolist())  # Convert numpy array to list
 
@@ -503,20 +680,26 @@ class CrossSectionViewer(QMainWindow):
         # Optionally, update the UI to indicate that this label is in edit mode.
      
 
-    def on_pick(self, event: PickEvent):
-        if event.artist is self.scatter:
+    def on_pick(self, event):
+        # Trigger picking only on the intended scatter plot
+        if isinstance(event.artist, type(self.scatter)):
             index = event.ind[0]  # Access the index directly
             print(f"Pick event triggered on scatter index {index}")
-            query = f"SELECT dist_out, lambda, node_id, reach_id FROM {self.river_table_name} WHERE river_name = '{self.name}'"
-            full_river_data = self.conn.execute(query).df()
-            full_river_data.drop_duplicates(subset=['node_id', 'reach_id'], inplace=True)
-            node_id = full_river_data.iloc[index]['node_id']
+            if hasattr(self, 'full_river_data') and not self.full_river_data.empty:
+                node_id = self.full_river_data.iloc[index]['node_id']
+            else:
+                # Fallback in case full_river_data is not set
+                query = f"SELECT dist_out, lambda, node_id, reach_id FROM {self.river_table_name} WHERE river_name = '{self.name}'"
+                full_river_data = self.conn.execute(query).df()
+                full_river_data.drop_duplicates(subset=['node_id', 'reach_id'], inplace=True)
+                node_id = full_river_data.iloc[index]['node_id']
             print(f"Selected node_id: {node_id}")
             self.node_id_entry.setText(str(node_id))
-            # Filter the data based on the selected node_id and plot the cross-section using DuckDB
+            # Filter and plot the cross section data for this selected node_id
             plot_data_query = f"SELECT * FROM {self.elevation_table_name} WHERE node_id = {node_id}"
-            df = self.conn.execute(plot_data_query).df()  # Convert the result to a pandas DataFrame for plotting
+            df = self.conn.execute(plot_data_query).df()
             df.drop_duplicates(subset=['node_id', 'reach_id'], inplace=True)
+            print("Elevation data shape:", df.shape)
             if not df.empty:
                 self.plot_cross_section(df)
             else:
@@ -833,6 +1016,16 @@ class CrossSectionViewer(QMainWindow):
     def load_next_cross_section(self):
         # Implement logic to load the next cross section
         pass  # You'll need to implement this based on your data structure
+
+    def format_value(self, value, format_spec=None):
+        """Format numeric values for display, handling None/NaN values and format specifications."""
+        if value is None or (isinstance(value, float) and np.isnan(value)):
+            return "N/A"
+        if isinstance(value, float):
+            if format_spec:
+                return format(value, format_spec)
+            return f"{value:.2f}"
+        return str(value)
 
 
 if __name__ == "__main__":
